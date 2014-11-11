@@ -18,7 +18,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
+import sqlite3 as lite
 import urllib2
 import urlparse
 from BeautifulSoup import *
@@ -48,8 +48,9 @@ class crawler(object):
         self._url_queue = [ ]
         self._doc_id_cache = { }
         self._word_id_cache = { }
-        self._inverted_dict= { }
-        self._inverted_resolved_dict= { }
+        
+        self._inverted_dict= { }		#the inverted, wordid is key, docid value
+        self._inverted_resolved_dict= { }	#word id as key, url as value
         # functions to call when entering and exiting specific tags
         self._enter = defaultdict(lambda *a, **ka: self._visit_ignore)
         self._exit = defaultdict(lambda *a, **ka: self._visit_ignore)
@@ -385,15 +386,67 @@ class crawler(object):
               if c== self._word_id_cache[a]:
                  reversed_word_key = a
           self._inverted_resolved_dict[reversed_word_key]= reversed_doc_key #store into global dictionary
-              #print k
-              #for b in self._doc_id_cache:
-                  #if k== self._doc_id_cache[b]:
-                     #self._inverted_dic[c][b] = self.Inverted_dict[c].pop(k)
-        #print self._inverted_dict      
-        #print self._inverted_resolved_dict
+        con=lite.connect("dbFile.db")
+        cur=con.cursor()
+        cur.execute('CREATE TABLE IF NOT EXISTS inverted_index(wordid INTEGER , docid INTEGER, PRIMARY KEY(wordid,docid));')
+
+        for c in self._inverted_dict:
+          for k in self._inverted_dict[c]:
+
+             cur.execute('INSERT INTO inverted_index VALUES(?,?)',[c,k])
+        con.commit()
+        
+        cur.execute('CREATE TABLE IF NOT EXISTS resolved_inverted_index(word TEXT, url TEXT, PRIMARY KEY(word,url));')
+        for c in self._inverted_resolved_dict:
+          for k in self._inverted_resolved_dict:
+          	 cur.execute('INSERT INTO resolved_inverted_index VALUES(?,?)',[c,k])
+        con.commit()
+        con.close
+        
+          
+           
                  
+    def page_rank(links, num_iterations=20, initial_pr=1.0):
+	    from collections import defaultdict
+	    import numpy as np
+
+	    page_rank = defaultdict(lambda: float(initial_pr))
+	    num_outgoing_links = defaultdict(float)
+	    incoming_link_sets = defaultdict(set)
+	    incoming_links = defaultdict(lambda: np.array([]))
+	    damping_factor = 0.85
+
+	    # collect the number of outbound links and the set of all incoming documents
+	    # for every document
+	    for (from_id,to_id) in links:
+		num_outgoing_links[int(from_id)] += 1.0
+		incoming_link_sets[to_id].add(int(from_id))
+	    
+	    # convert each set of incoming links into a numpy array
+	    for doc_id in incoming_link_sets:
+		incoming_links[doc_id] = np.array([from_doc_id for from_doc_id in incoming_link_sets[doc_id]])
+
+	    num_documents = float(len(num_outgoing_links))
+	    lead = (1.0 - damping_factor) / num_documents
+	    partial_PR = np.vectorize(lambda doc_id: page_rank[doc_id] / num_outgoing_links[doc_id])
+
+	    for _ in xrange(num_iterations):
+		for doc_id in num_outgoing_links:
+		    tail = 0.0
+		    if len(incoming_links[doc_id]):
+		        tail = damping_factor * partial_PR(incoming_links[doc_id]).sum()
+		    page_rank[doc_id] = lead + tail
+	    
+	    return page_rank
 
 
 if __name__ == "__main__":
     bot = crawler(None, "urls.txt")
     bot.crawl(depth=1)
+    
+    
+    
+    #page_rank method is to be called here
+    
+    
+    #after it's called then save data to db
