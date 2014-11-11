@@ -1,0 +1,21 @@
+import os
+import sys
+from crawler import crawler
+
+
+print "Now starting the test...."
+print 
+crawler = crawler(None, "urls.txt")
+inverted_index = crawler.get_inverted_index()
+print
+print "inverted_index is......"
+print
+print inverted_index
+print 
+print
+resolved_inverted_index = crawler.get_resolved_inverted_index()
+print "resolved_inverted_index is......"
+print
+print resolved_inverted_index
+
+

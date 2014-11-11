@@ -1,0 +1,44 @@
+AKey='AKIAJH7DQKPUGMNGODCA'
+SecAKey='crmYvJ+SXyzjA6zsGzuJe8cn1nwJRhWuaT+69v1Z'
+
+import boto
+from boto import ec2
+import uuid
+import sys
+import os
+
+def connect():
+    conn = boto.ec2.connection.EC2Connection(AKey,SecAKey)
+    #conn.release_address()
+    #static_add = conn.allocate_address()
+    #print static_add
+    Keypair = conn.get_key_pair('csc326-group10')
+    if Keypair == None:
+        Keypair = conn.create_key_pair('csc326-group10')
+        Keypair.save('.')
+        
+    #conn.delete_security_group('group-10')
+    security = conn.create_security_group('csc326-group10','csc326group')
+    
+    	#security.authorize('icmp',-1,-1,'0.0.0.0/0')
+    	#security.authorize('tcp',22,22,'0.0.0.0/0')
+    	#security.authorize('tcp',80,80,'0.0.0.0/0')
+    security.authorize('icmp',-1,-1,'0.0.0.0/0')
+    security.authorize('tcp',22,22,'0.0.0.0/0')
+    security.authorize('tcp',80,80,'0.0.0.0/0')
+    #ip= conn.get_only_instances()
+    #if(len(ip)==0):
+    reservation_obj= conn.run_instances('ami-8caa1ce4', key_name='csc326-group10',instance_type='t1.micro',security_groups=['csc326-group10'])
+   # print len(ip)
+    #conn.associate_address('i-476042aa','54.172.56.180')
+    #static_add.associate('i-a99d9b47')
+    #print type(security)
+    
+  
+    #print type(Keypair)
+    #print type(reservation_obj)
+    
+
+
+
+connect()

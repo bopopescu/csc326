@@ -1,0 +1,115 @@
+from bottle import route, run, get, post, request # or route 
+import os
+import sys
+import string
+import copy
+import crawler
+
+#declear a global history list for history keywords
+history =[]
+temp = []
+for j in (0, 2): 
+	if j == 0 :
+		temp.append('')
+	else:
+		temp.append(0)
+history.append(temp)
+
+
+@route('/')
+def home():
+
+#home is just printing out the history table and a form using HTML form
+
+	return_buffer = '''<form action="/result" method="post" align="center"> Enter Keywords: <input name="keywords" type="text"/> <input 		value="Search" type="submit" /> </form> 
+
+<p>*Note that for Lab1 we seperate the string only based on spaces, nothing is handingly punctuation or special characters. That will get handled later on, but for Lab1 TA said it is okay to serperate only based on spaces</p>'''
+
+
+	if history[0][0] != '':
+		return_buffer +='''<table id="history" align = "center" border="1">'''
+
+
+		for k in range(len(history)):
+			return_buffer +='''
+					<tr>
+						<td>%s</td>
+						<td>%d</td>
+					</tr>'''% (history[k][0], history[k][1])
+
+		return_buffer += '''</table>'''
+
+
+	return_buffer += ''''''
+	return return_buffer
+
+	
+
+@post('/result') # or @route('/result', method='POST') 
+def result(): 
+	#ready to update global variable
+	global history
+	#use html get to get the keywords that user input, also check if the input is nothing or all spaces, if so, return none
+	if request.forms.get('keywords') == '' or request.forms.get('keywords').isspace():
+		return None
+	
+	#BREAK THE INPUT INTO PIECES USING BUILT IN METHOD .split() AND APPEND IT TO A LIST
+	broken_string = request.forms.get('keywords').split()
+	result_list = []
+	for word in broken_string:
+		result_list.append(word)
+
+
+	#CREATE A 2D LIST THAT STORES THE VALUE AND RETURN TO HTML
+	#first converting list to set, then back to list to remove dups temporarily in order not to create dups records in the result table
+	result_table =[]
+	result_set_tmp = set(result_list)
+	result_set = sorted(list(result_set_tmp))
+	
+	for i in range (len(result_set)):
+		new = []
+		for j in (0, 2): 
+			if j == 0 :
+				new.append(result_set[i])
+			else:
+				new.append(result_list.count(result_set[i]))
+		result_table.append(new)
+
+	#TEMP_RESULT IS FINISHED, DEEP COPY IT TO AVOID ACCIENT MODIFICATION!
+	result_static = copy.deepcopy(result_table)
+
+
+	#UPDATE THE GLOBAL HISTORY TABLE
+	for his_i in range(len(result_table)):
+		#IF HISTORY IS EMPTY, COPY THE RESULT_TABLE IN IT.
+		if history[0][0] == '':
+			history = result_table
+			break
+		#LOOP THROUGH HISTORY AND SEE IF THE WORD ALREADY EXISTS, IF SO, JUST ADD THE EXISTING COUNT TO THIS SEARCH'S COUNT
+		#IF NOT, APPEND
+		for sublist in history:
+			if sublist[0] == result_table[his_i][0]:
+				history[history.index([sublist[0],sublist[1]])][1] += result_table[his_i][1]
+				break
+			elif sublist[0] == history[-1][0]:
+				history.append(result_table[his_i])
+				break
+
+
+	#PREPARE BUFFER FOR RESULT USING THE DEEP COPIED RESULT TABLE
+	return_buffer = '''<table id="results" align = "Center" border="1">'''
+	for k in range(len(result_static)):
+		return_buffer +='''
+				<tr>
+					<td>%s</td>
+					<td>%d</td>
+				</tr>'''% (result_static[k][0], result_static[k][1])
+
+	return_buffer += '''</table>'''
+
+
+	return return_buffer
+
+
+run(host='localhost', port=8080, debug=True)
+
