@@ -12,13 +12,8 @@ from googleapiclient.discovery import build
 from beaker.middleware import SessionMiddleware
 import beaker as beaker
 
-#redirect_link='http://ec2-54-172-56-180.compute-1.amazonaws.com/redirect'
-#c_id='1054097336369-epapeu21l22job328u6odukktj8krtho.apps.googleusercontent.com'
-#c_sec="G33ZPGvT_HNHxEY0N24puYTq"
-c_id='XXXXXXXXX'
-c_sec='XXXXXXXXXXXXXXX'
-redirect_link='XXXXXXXXXXXXXXXXXXXXXX'
-JSon_Secret_path = 'Secret.json'
+
+
 
 #declear a global history list for history keywords
 history =[]
@@ -32,12 +27,13 @@ def home():
 
 	#home is just printing out the history table and a form using HTML form
 	
+	
 	return_buffer = '''
 				<html>
-				<div style="position:   absolute;
-    							top:20%;
-    							right:0;
-    							left:20%;">
+				<div style="position:absolute;
+				    top:20%;
+				    right:0;
+				    left:20%;">
 				<img src = "Google_logo.png" rel="images" style="width:800px;height:300px;"/>
 				</div>
 			'''
@@ -46,37 +42,38 @@ def home():
 
 	#check if the user is logged in
 	s = bottle.request.environ.get('beaker.session')
+	print s
+	#check to see if user is logged in
 	if 'email' not in s.keys():
-	#if not logged in, give sign_in button
 		return_buffer += '''
+				
 				<form action="/sign_in" method="get">
-				<input type="image" src = "G_signin.png" rel="images" style = "width:180px;height:50px;" alt = 						"Submit"  ></input><br>
+				<input type="image" src="https://developers.google.com/accounts/images/sign-in-with-google.png" style = 					"width:180px;height:50px;" alt = "Submit"  ></input><br>
 				</form>
 				<div style="position:absolute;
-						    top:50%;
-						    right:0;
-						    left:0;">
-
-				<form name="Main_Form" action="/result" method="post" align="center"> <input name="keywords" 						type="text" style="width:650px;"/>
-				<select name="myOptions" onchange="document.Main_Form.keywords.value=this.value">
-				<option value="">Please Log In To See Your Top 10 Most Recent Words</option>
-				</select>
-				<input type="image"src = "Search_button.png" rel="images" style = "width:30px;height:30px" alt = 						"Submit"  > </form> 
+					    top:50%;
+					    right:0;
+					    left:0;">
+					<form name="Main_Form" action="/result" method="post" align="center"> <input name="keywords" 							type="text"style="width:650px;"/>
+					<select name="myOptions" onchange="document.Main_Form.keywords.value=this.value">
+					<option value="">Please Log In To See Your Top 10 Most Recent Words</option>
+					</select>
+					<input type="image" src="http://www.clker.com/cliparts/Y/x/X/j/U/f/search-button-without-text-						md.png" style = "width:30px;height:30px" alt = "Submit"  > </form> 
 				</div>
 				''' 
 	else:
-	#if logged in, give sign_out button and the 10 recent words
 		return_buffer += '''<form action="/sign_out" method="get">
-				<input type="image" src = "G_signout.png" rel="images" style = "width:120px;height:50px" alt = 						"Submit"  ></input><br>
+				<input type="image" src="http://i.stack.imgur.com/I3NM6.png" style = "width:120px;height:50px" alt = 						"Submit"  ></input><br>
 				</form>
 				<p>WELCOME, %s</p>''' % s['email'] 
 
-		return_buffer += '''	<div style="position:absolute;
-							     top:50%;
-							     right:0;
-							     left:0;">
 
-					<form name="Main_Form" action="/result" method="post" align="center"> <input name="keywords" 							type="text" style="width:650px;"/>
+
+		return_buffer += '''<div style="position:absolute;
+							 top:50%;
+							 right:0;
+							 left:0;">
+					<form name="Main_Form" action="/result" method="post" align="center"> <input name="keywords" type="text" style="width:650px;"/>
 					<select name="myOptions" onchange="document.Main_Form.keywords.value=this.value">
 					<option value="">Your Top 10 Most Recent Words</option>
 				'''
@@ -84,6 +81,7 @@ def home():
 		if history[0][0] != '':
 	
 		# change how to format the string to show 10 recent
+		
 			for k in range(len(history)):
 				if s['email']  in history[k]:
 					if s['email'] == history[k][0]:
@@ -101,34 +99,39 @@ def home():
 		else:
 			return_buffer += '''<p>You Have no Search History Yet, Try Searching Sommething!</p>'''
 
-		return_buffer += '''	</select>
-					<input type="image" src = "Search_button.png" rel="images" style = "width:30px;height:30px" alt 						= "Submit"  > </form> 
-					</div>'''
-					
-	#close with the html tage and return
+		return_buffer += '''</select>
+				   <input type="image" src="http://www.clker.com/cliparts/Y/x/X/j/U/f/search-button-without-text-md.png" 						style = "width:30px;height:30px" alt = "Submit"  > </form> 
+				</div>'''
+	
+
 	return_buffer += '''</html>'''
 	return return_buffer
 
 
 
 
+
+
 @route('/sign_in', method='GET') 
 def sign_in():
-	flow = flow_from_clientsecrets( JSon_Secret_path,
+	flow = flow_from_clientsecrets("Secret.json",
 					scope='https://www.googleapis.com/auth/plus.me https://www.googleapis.com/auth/userinfo.email',
-					redirect_uri=redirect_link)
+					redirect_uri="http://localhost:8080/redirect")
 	url = flow.step1_get_authorize_url()
 	bottle.redirect(str(url))
 
 
 
 
+
+
 @route('/sign_out', method='GET') 
 def sign_out():
-	#invalidate the session
 	s = bottle.request.environ.get('beaker.session')
 	s.invalidate()
 	bottle.redirect("/")	
+
+
 
 
 
@@ -137,9 +140,12 @@ def sign_out():
 def result(): 
 	#ready to update global variable
 	global history
-	return_buffer =''
+	#use html get to get the keywords that user input, also check if the input is nothing or all spaces, if so, return none
+	if request.forms.get('keywords') == '' or request.forms.get('keywords').isspace():
+		return None
 	
-	
+
+
 	#BREAK THE INPUT INTO PIECES USING BUILT IN METHOD .split() AND APPEND IT TO A LIST
 	broken_string = request.forms.get('keywords').split()
 	result_list = []
@@ -147,8 +153,10 @@ def result():
 		result_list.append(word)
 
 
+
+
 	#CREATE A 2D LIST THAT STORES THE VALUE AND RETURN TO HTML
-	#first converting list to set, then back to list to remove dups temporarily in order not to create dups records in the result 		table
+	#first converting list to set, then back to list to remove dups temporarily in order not to create dups records in the result table
 	result_table =[]
 	result_set_tmp = set(result_list)
 	result_set = sorted(list(result_set_tmp))
@@ -165,18 +173,15 @@ def result():
 	#TEMP_RESULT IS FINISHED, DEEP COPY IT TO AVOID ACCIENT MODIFICATION!
 	result_static = copy.deepcopy(result_table)
 
+
+
+
 	#See if the User is logged in, then use FIFO to put the most recent words in for the user
-	#TODO, write the logic for putting the 10 most recent into history table
+	#write the logic for putting the 10 most recent into history table
 	s = bottle.request.environ.get('beaker.session')
 	if 'email' in s.keys():
-		
-		return_buffer += '''<form action="/sign_out" method="get">
-				<input type="image" src = "G_signout.png" rel="images" style = "width:120px;height:50px" alt = 				"Submit"  ></input><br>
-				</form>'''
-
-		
 		#Create the list to put into the history table
-		#print result_table
+		print result_table
 		if history[0][0] == '':
 			history[0][0]= s.get('email')
 			for i in range (len(result_table)):
@@ -189,7 +194,7 @@ def result():
 				if history[his_i][0] == s.get('email'):
 					for list_i in range(len(result_table)):
 						if len(history[his_i]) == 11:
-							#print list_i
+							print list_i
 							del history[his_i][1]
 							history[his_i].append(result_table[list_i][0])
 						else:
@@ -204,47 +209,34 @@ def result():
 						temp_list.append(result_table[i][0])
 					history.append(temp_list)
 	
-		#print history
-	else:
-		return_buffer += '''
-				
-				<form action="/sign_in" method="get">
-				<input type="image" src = "G_signin.png" rel="images" style = 					"width:180px;height:50px;" alt = "Submit"  ></input><br>
-				</form>'''
-		
-		
+		print history
 
 	#PREPARE BUFFER FOR RESULT USING THE DEEP COPIED RESULT TABLE
-	return_buffer += '''
-					<form action="/" method="get">
+	return_buffer = '''
+				<form action="/" method="get">
 				<input type="image" src = "back.png" rel="images"style = "width:80px;height:80px;"   ></input><br>
 				</form>
-
-'''
+			'''
 
 	
-	
-
-
-
-
 
 	return_buffer += '''
-<style type="text/css">
-table.example3 {background-color:transparent;border-collapse:collapse;width:100%;}
-table.example3 th, table.example3 td {text-align:center;border:1px solid black;padding:5px;}
-table.example3 th {background-color:AntiqueWhite;}
-table.example3 td:first-child {width:20%;}
-</style>
-<table id="results" class ="example3">
-<tr>
-<th colspan="2">Search Result BreakDown</th>
-</tr>
-<tr>
-					<td>Words</td>
-					<td>Count In Search String</td>
-</tr>
-'''
+				<style type="text/css">
+				table.example3 {background-color:transparent;border-collapse:collapse;width:100%;}
+				table.example3 th, table.example3 td {text-align:center;border:1px solid black;padding:5px;}
+				table.example3 th {background-color:AntiqueWhite;}
+				table.example3 td:first-child {width:20%;}
+				</style>
+				<table id="results" class ="example3">
+				<tr>
+				<th colspan="2">Search Result BreakDown</th>
+				</tr>
+				<tr>
+									<td>Words</td>
+									<td>Count In Search String</td>
+				</tr>
+			'''
+
 	for k in range(len(result_static)):
 		return_buffer +='''
 				<tr>
@@ -260,25 +252,24 @@ table.example3 td:first-child {width:20%;}
 
 
 
+
+
 @route('/redirect', method='GET') 
 def redirect(): 
-
-	
-
 	#redirected page, this means the user has successfully signed in
 	code = request.query.get('code', 'denied')
 	if code == "denied":
 		bottle.redirect("/")
 
-	#print 'here before flow.............'
+	
 
-	flow = OAuth2WebServerFlow( 	client_id= c_id,
-					client_secret= c_sec,
+	flow = OAuth2WebServerFlow( 	client_id="1054097336369-epapeu21l22job328u6odukktj8krtho.apps.googleusercontent.com",
+					client_secret="G33ZPGvT_HNHxEY0N24puYTq",
 					scope='https://www.googleapis.com/auth/plus.me https://www.googleapis.com/auth/userinfo.email',
-					redirect_uri= redirect_link)
+					redirect_uri="http://localhost:8080/redirect")
 	credentials = flow.step2_exchange(code)
 	token = credentials.id_token['sub']
-	#print 'here after flow'
+
 	# Get user email
 	http = httplib2.Http()
 	http = credentials.authorize(http)
@@ -292,14 +283,70 @@ def redirect():
 	s['unique_user'] = s.id
 	s['email'] = user_email
 	s.save()
-	#print s
-	
-	
-
+	print s
 
 	bottle.redirect("/")
 
 	return return_buffer
+
+
+@error(404)
+def custom404(error):
+    return '''<html>
+<head>
+<title>woody 404 for Website Template for free | Home :: w3layouts</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<link href='http://fonts.googleapis.com/css?family=Amarante' rel='stylesheet' type='text/css'>
+<style type="text/css">
+body{
+	background:url(images/bg.png);
+	margin:0;
+}
+.wrap{
+	margin:0 auto;
+	width:1000px;
+}
+.logo{
+	text-align:center;
+}	
+.logo p span{
+	color:lightgreen;
+}	
+.sub a{
+	color:white;
+	background:rgba(0,0,0,0.3);
+	text-decoration:none;
+	padding:5px 10px;
+	font-size:13px;
+	font-family: arial, serif;
+	font-weight:bold;
+}	
+.footer{
+	color:#555;
+	position:absolute;
+	right:10px;
+	bottom:10px;
+	font-weight:bold;
+	font-family:arial, serif;
+}	
+.footer a{
+	font-size:16px;
+	color:#ff4800;
+}	
+</style>
+</head>
+
+
+<body>
+
+ <img src="img/woody-404.jp"/> 	
+	
+				<form action="/" method="get">
+				<input type="image" src = "back.png" rel="images"style = "width:80px;height:80px;"   ></input><br>
+				</form>
+</body>'''
+
+
 
 @get('/<filename:re:.*\.(jpg|png|gif|ico)>')
 def images(filename):
@@ -309,9 +356,9 @@ session_opts = {
 	    'session.type': 'file',
 	    'session.cookie_expires': 300,
 	    'session.data_dir': './data',
-	    'session.auto': True 
+	    'session.auto': False
 	}
 app = SessionMiddleware(bottle.app(), session_opts)
 
-run(host='0.0.0.0', port=80, debug=False,app=app)
+run(host='localhost', port=8080, debug=False,app=app)
 
