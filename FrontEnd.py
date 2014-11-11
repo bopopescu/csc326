@@ -48,7 +48,11 @@ def home():
 		return_buffer += '''
 				
 				<form action="/sign_in" method="get">
-				<input type="image" src="https://developers.google.com/accounts/images/sign-in-with-google.png" style = 					"width:180px;height:50px;" alt = "Submit"  ></input><br>
+				<input type="image" src="G_signin.png" rel="images" style = 					"	     	width:180px;height:50px;
+						position:absolute;
+					    	top:3%;
+					    	right:0;
+					    	left:85%;" alt = "Submit"  ></input><br>
 				</form>
 				<div style="position:absolute;
 					    top:50%;
@@ -58,14 +62,24 @@ def home():
 					<select name="myOptions" onchange="document.Main_Form.keywords.value=this.value">
 					<option value="">Please Log In To See Your Top 10 Most Recent Words</option>
 					</select>
-					<input type="image" src="http://www.clker.com/cliparts/Y/x/X/j/U/f/search-button-without-text-						md.png" style = "width:30px;height:30px" alt = "Submit"  > </form> 
+					<input type="image" src = "Search_button.png" rel="images" style = "width:30px;height:30px;" alt = "Submit"  > </form> 
 				</div>
 				''' 
 	else:
 		return_buffer += '''<form action="/sign_out" method="get">
-				<input type="image" src="http://i.stack.imgur.com/I3NM6.png" style = "width:120px;height:50px" alt = 						"Submit"  ></input><br>
+				<input type="image" src="G_signout.png" rel="images" style = "
+						width:120px;height:50px;
+						position:absolute;
+					    	top:3%%;
+					    	right:0;
+					    	left:85%%;" alt = 						"Submit"  ></input><br>
 				</form>
-				<p>WELCOME, %s</p>''' % s['email'] 
+				<p style = "
+						width:120px;height:50px;
+						position:absolute;
+					    	top:7%%;
+					    	right:0;
+					    	left:85%%;">WELCOME, %s</p>''' % s['email'] 
 
 
 
@@ -100,7 +114,7 @@ def home():
 			return_buffer += '''<p>You Have no Search History Yet, Try Searching Sommething!</p>'''
 
 		return_buffer += '''</select>
-				   <input type="image" src="http://www.clker.com/cliparts/Y/x/X/j/U/f/search-button-without-text-md.png" 						style = "width:30px;height:30px" alt = "Submit"  > </form> 
+				   <input type="image" src = "Search_button.png" rel="images" style = "width:30px;height:30px" alt = "Submit"  > </form> 
 				</div>'''
 	
 
@@ -140,10 +154,11 @@ def sign_out():
 def result(): 
 	#ready to update global variable
 	global history
+	return_buffer = ''''''
 	#use html get to get the keywords that user input, also check if the input is nothing or all spaces, if so, return none
-	if request.forms.get('keywords') == '' or request.forms.get('keywords').isspace():
-		return None
 	
+
+
 
 
 	#BREAK THE INPUT INTO PIECES USING BUILT IN METHOD .split() AND APPEND IT TO A LIST
@@ -212,9 +227,10 @@ def result():
 		print history
 
 	#PREPARE BUFFER FOR RESULT USING THE DEEP COPIED RESULT TABLE
-	return_buffer = '''
+	return_buffer += '''
 				<form action="/" method="get">
-				<input type="image" src = "back.png" rel="images"style = "width:80px;height:80px;"   ></input><br>
+				<input type="image" src = "Google_logo.png" rel="images"style = "width:170px;height:70px;position:relative;
+					    	top:6%; "   ></input><br>
 				</form>
 			'''
 
@@ -245,6 +261,68 @@ def result():
 				</tr>'''% (result_static[k][0], result_static[k][1])
 
 	return_buffer += '''</table>'''
+
+
+
+
+
+
+	s = bottle.request.environ.get('beaker.session')
+	print s
+	#check to see if user is logged in
+	if 'email' not in s.keys():
+		return_buffer += '''
+					
+					<div style="position:absolute;
+						    top:3%;
+						    right:0;
+						    left:10%;">
+						<form name="Main_Form" action="/result" method="post" align="center"> <input 								name="keywords" type="text"style="width:650px;"/>
+						<select name="myOptions" onchange="document.Main_Form.keywords.value=this.value">
+						<option value="">Please Log In To See Your Top 10 Most Recent Words</option>
+						</select>
+						<input type="image" src = "Search_button.png" rel="images" style = "width:30px;height:30px" 							alt = "Submit"  > </form> 
+					</div>
+					''' 
+	else:
+		return_buffer += '''
+
+					<div style="position:absolute;
+						    top:3%;
+						    right:0;
+						    left:10%;">
+						<form name="Main_Form" action="/result" method="post" align="center"> <input 							name="keywords" type="text" style="width:650px;"/>
+						<select name="myOptions" onchange="document.Main_Form.keywords.value=this.value">
+						<option value="">Your Top 10 Most Recent Words</option>
+					
+					
+
+					''' 
+		if history[0][0] != '':
+	
+		# change how to format the string to show 10 recent
+		
+			for k in range(len(history)):
+				if s['email']  in history[k]:
+					if s['email'] == history[k][0]:
+
+						for j in range(len(history[k])):
+							if j != 0:
+								return_buffer +='''
+											<option value="%s">%s</option>
+										'''% (history[k][j],history[k][j])
+
+						
+				elif history[k] == history[-1]:
+					print s['email'], history[k], history
+					return_buffer += '''<p>You Have no Search History Yet, Try Searching Sommething!</p>'''
+		else:
+			return_buffer += '''<p>You Have no Search History Yet, Try Searching Sommething!</p>'''
+
+		return_buffer += '''</select>
+				   <input type="image" src = "Search_button.png" rel="images" style = "width:30px;height:30px" alt = "Submit"  > </form> 
+				</div>'''
+
 
 
 	return return_buffer
@@ -293,58 +371,17 @@ def redirect():
 @error(404)
 def custom404(error):
     return '''<html>
-<head>
-<title>woody 404 for Website Template for free | Home :: w3layouts</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-<link href='http://fonts.googleapis.com/css?family=Amarante' rel='stylesheet' type='text/css'>
-<style type="text/css">
-body{
-	background:url(images/bg.png);
-	margin:0;
-}
-.wrap{
-	margin:0 auto;
-	width:1000px;
-}
-.logo{
-	text-align:center;
-}	
-.logo p span{
-	color:lightgreen;
-}	
-.sub a{
-	color:white;
-	background:rgba(0,0,0,0.3);
-	text-decoration:none;
-	padding:5px 10px;
-	font-size:13px;
-	font-family: arial, serif;
-	font-weight:bold;
-}	
-.footer{
-	color:#555;
-	position:absolute;
-	right:10px;
-	bottom:10px;
-	font-weight:bold;
-	font-family:arial, serif;
-}	
-.footer a{
-	font-size:16px;
-	color:#ff4800;
-}	
-</style>
-</head>
 
 
-<body>
+<body background="woody-404.jpg" rel="images" style = "background-size : 100% auto;">
 
- <img src="img/woody-404.jp"/> 	
-	
+				<div style="position:absolute;
+				    top:70%;
+				    right:0;
+				    left:47%;">
 				<form action="/" method="get">
-				<input type="image" src = "back.png" rel="images"style = "width:80px;height:80px;"   ></input><br>
-				</form>
-</body>'''
+				<input type="image" src = "back.png" rel="images" style = "width:80px;height:80px;"   ></input><br>
+				</form></div></body>'''
 
 
 
