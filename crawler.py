@@ -375,10 +375,14 @@ class crawler(object):
         con=lite.connect("dbFile.db")
        	cur=con.cursor()
             
-        cur.execute('CREATE TABLE IF NOT EXISTS inverted_index(wordid INTEGER , docid INTEGER, PRIMARY KEY(wordid,docid));')
-	cur.execute('CREATE TABLE IF NOT EXISTS Lexicon(wordid INTEGER PRIMARY KEY, word TEXT);')
+        cur.execute('CREATE TABLE IF NOT EXISTS Lexicon(wordid INTEGER PRIMARY KEY, word TEXT, FOREIGN KEY(wordid) REFERENCES inverted_index(wordid));')
+        
+        cur.execute('CREATE TABLE IF NOT EXISTS inverted_index(wordid INTEGER , docid INTEGER, PRIMARY KEY(wordid,docid), FOREIGN KEY(docid) REFERENCES PageRank(docid));')
+        
+	cur.execute('CREATE TABLE IF NOT EXISTS PageRank(docid INTEGER, rank REAL, PRIMARY KEY(docid,rank),FOREIGN KEY(docid) REFERENCES DocId_url(docid));')
+	
 	cur.execute('CREATE TABLE IF NOT EXISTS DocId_url(docid INTEGER, url TEXT, PRIMARY KEY(docid,url));')
-	cur.execute('CREATE TABLE IF NOT EXISTS PageRank(docid INTEGER, rank REAL, PRIMARY KEY(docid,rank));')
+
 	
         for c in self._inverted_dict:
           for k in self._inverted_dict[c]:
