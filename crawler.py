@@ -51,6 +51,17 @@ class crawler(object):
         
         self._inverted_dict= { }		#the inverted, wordid is key, docid value
         self._inverted_resolved_dict= { }	#word id as key, url as value
+        self._lexicon={}				#different from word_id_cache, lexicon is user input not website words
+
+	self.con=lite.connect("dbFile.db")
+	self.cur=con.cursor()
+        self.cur.executescript(
+            """
+            DROP TABLE IF EXISTS Lexicon;
+            DROP TABLE IF EXISTS inverted_index;
+            DROP TABLE IF EXISTS PageRank;""")
+
+        
         # functions to call when entering and exiting specific tags
         self._enter = defaultdict(lambda *a, **ka: self._visit_ignore)
         self._exit = defaultdict(lambda *a, **ka: self._visit_ignore)
@@ -137,6 +148,22 @@ class crawler(object):
         ret_id = self._mock_next_word_id
         self._mock_next_word_id += 1
         return ret_id
+
+    def _insert_document(self, url):
+        """A function that pretends to insert a url into a document db table
+        and then returns that newly inserted document's id."""
+        ret_id = self._next_doc_id
+        self._next_doc_id += 1
+        return ret_id
+    
+    # TODO remove me in real version
+    def _insert_word(self, word):
+        """A function that pretends to inster a word into the lexicon db table
+        and then returns that newly inserted word's id."""
+        ret_id = self._next_word_id
+        self._next_word_id += 1
+        self._lexicon[word]=ret_id
+        return ret_id
     
     def word_id(self, word):
         """Get the word id of some specific word."""
@@ -148,7 +175,7 @@ class crawler(object):
         #       2) query the lexicon for the id assigned to this word, 
         #          store it in the word id cache, and return the id.
 
-        word_id = self._mock_insert_word(word)
+        word_id = self._insert_word(word)
         self._word_id_cache[word] = word_id
         return word_id
         
@@ -176,7 +203,7 @@ class crawler(object):
         #       doesn't exist in the db then only insert the url and leave
         #       the rest to their defaults.
         
-        doc_id = self._mock_insert_document(url)
+        doc_id = self._insert_document(url)
         self._doc_id_cache[url] = doc_id
         return doc_id
     
@@ -387,18 +414,26 @@ class crawler(object):
                  reversed_word_key = a
           self._inverted_resolved_dict[reversed_word_key]= reversed_doc_key #store into global dictionary
         con=lite.connect("dbFile.db")
-        cur=con.cursor()
+       	cur=con.cursor()
+            
         cur.execute('CREATE TABLE IF NOT EXISTS inverted_index(wordid INTEGER , docid INTEGER, PRIMARY KEY(wordid,docid));')
-
+	cur.execute('CREATE TABLE IF NOT EXISTS Lexicon(wordid INTEGER PRIMARY KEY, word TEXT);')
+	cur.execute('CREATE TABLE IF NOT EXISTS resolved_inverted_index(word TEXT, url TEXT, PRIMARY KEY(word,url));')
+	
         for c in self._inverted_dict:
           for k in self._inverted_dict[c]:
 
              cur.execute('INSERT INTO inverted_index VALUES(?,?)',[c,k])
         con.commit()
         
-        cur.execute('CREATE TABLE IF NOT EXISTS resolved_inverted_index(word TEXT, url TEXT, PRIMARY KEY(word,url));')
+        
         for c in self._inverted_resolved_dict:
-          for k in self._inverted_resolved_dict:
+          for k in self._inverted_resolved_dict[c]:
+          	 cur.execute('INSERT INTO resolved_inverted_index VALUES(?,?)',[c,k])
+        con.commit()
+
+        for c in self._Lexicon:
+          for k in self._Lexicon[c]:
           	 cur.execute('INSERT INTO resolved_inverted_index VALUES(?,?)',[c,k])
         con.commit()
         con.close
