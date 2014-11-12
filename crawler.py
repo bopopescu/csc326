@@ -1,23 +1,6 @@
 
-# Copyright (C) 2011 by Peter Goodman
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+
+import page_rank
 import sqlite3 as lite
 import urllib2
 import urlparse
@@ -52,15 +35,8 @@ class crawler(object):
         self._inverted_dict= { }		#the inverted, wordid is key, docid value
         self._inverted_resolved_dict= { }	#word id as key, url as value
         self._lexicon={}				#different from word_id_cache, lexicon is user input not website words
-
-	self.con=lite.connect("dbFile.db")
-	self.cur=con.cursor()
-        self.cur.executescript(
-            """
-            DROP TABLE IF EXISTS Lexicon;
-            DROP TABLE IF EXISTS inverted_index;
-            DROP TABLE IF EXISTS PageRank;""")
-
+	self._from_to_link=[]
+	
         
         # functions to call when entering and exiting specific tags
         self._enter = defaultdict(lambda *a, **ka: self._visit_ignore)
@@ -115,8 +91,8 @@ class crawler(object):
         ])
 
         # TODO remove me in real version
-        self._mock_next_doc_id = 1
-        self._mock_next_word_id = 1
+        self._next_doc_id = 1
+        self._next_word_id = 1
 
         # keep track of some info about the page we are currently parsing
         self._curr_depth = 0
@@ -133,21 +109,7 @@ class crawler(object):
         except IOError:
             pass
     
-    # TODO remove me in real version
-    def _mock_insert_document(self, url):
-        """A function that pretends to insert a url into a document db table
-        and then returns that newly inserted document's id."""
-        ret_id = self._mock_next_doc_id
-        self._mock_next_doc_id += 1
-        return ret_id
-    
-    # TODO remove me in real version
-    def _mock_insert_word(self, word):
-        """A function that pretends to inster a word into the lexicon db table
-        and then returns that newly inserted word's id."""
-        ret_id = self._mock_next_word_id
-        self._mock_next_word_id += 1
-        return ret_id
+
 
     def _insert_document(self, url):
         """A function that pretends to insert a url into a document db table
@@ -182,15 +144,9 @@ class crawler(object):
         
     #implementation of get inverted index    
     def get_inverted_index(self):
-        #if len(self._inverted_resolved_dict)==0:
-           #self.crawl(depth=1)
-        #print self._inverted_dict
         return self._inverted_dict
         
     def get_resolved_inverted_index(self):
-        #if len(self._inverted_resolved_dict)==0:
-           #self.crawl(depth=1)
-        #print self._inverted_resolved_dict
         return self._inverted_resolved_dict
         
         
@@ -223,7 +179,7 @@ class crawler(object):
     def add_link(self, from_doc_id, to_doc_id):
         """Add a link into the database, or increase the number of links between
         two pages in the database."""
-        # TODO
+        self._from_to_link.append([from_doc_id,to_doc_id])
 
     def _visit_title(self, elem):
         """Called when visiting the <title> tag."""
@@ -247,6 +203,7 @@ class crawler(object):
         
         # add a link entry into the database from the current document to the
         # other document
+
         self.add_link(self._curr_doc_id, self.document_id(dest_url))
 
         # TODO add title/alt/text to index for destination url
@@ -413,72 +370,55 @@ class crawler(object):
               if c== self._word_id_cache[a]:
                  reversed_word_key = a
           self._inverted_resolved_dict[reversed_word_key]= reversed_doc_key #store into global dictionary
+        
+       # print self._doc_id_cache 
         con=lite.connect("dbFile.db")
        	cur=con.cursor()
             
         cur.execute('CREATE TABLE IF NOT EXISTS inverted_index(wordid INTEGER , docid INTEGER, PRIMARY KEY(wordid,docid));')
 	cur.execute('CREATE TABLE IF NOT EXISTS Lexicon(wordid INTEGER PRIMARY KEY, word TEXT);')
-	cur.execute('CREATE TABLE IF NOT EXISTS resolved_inverted_index(word TEXT, url TEXT, PRIMARY KEY(word,url));')
+	cur.execute('CREATE TABLE IF NOT EXISTS DocId_url(docid INTEGER, url TEXT, PRIMARY KEY(docid,url));')
+	cur.execute('CREATE TABLE IF NOT EXISTS PageRank(docid INTEGER, rank REAL, PRIMARY KEY(docid,rank));')
 	
         for c in self._inverted_dict:
           for k in self._inverted_dict[c]:
 
-             cur.execute('INSERT INTO inverted_index VALUES(?,?)',[c,k])
+             cur.execute('INSERT OR IGNORE INTO inverted_index VALUES(?,?)',[c,k])
         con.commit()
         
         
-        for c in self._inverted_resolved_dict:
-          for k in self._inverted_resolved_dict[c]:
-          	 cur.execute('INSERT INTO resolved_inverted_index VALUES(?,?)',[c,k])
+        for c in self._doc_id_cache:
+          	 cur.execute('INSERT OR IGNORE INTO DocId_url VALUES(?,?)',[self._doc_id_cache[c],c])
         con.commit()
 
-        for c in self._Lexicon:
-          for k in self._Lexicon[c]:
-          	 cur.execute('INSERT INTO resolved_inverted_index VALUES(?,?)',[c,k])
+        for c in self._lexicon:
+          	 cur.execute('INSERT OR IGNORE INTO Lexicon VALUES(?,?)',[self._lexicon[c],c])
         con.commit()
+        
+        
         con.close
         
           
            
-                 
-    def page_rank(links, num_iterations=20, initial_pr=1.0):
-	    from collections import defaultdict
-	    import numpy as np
-
-	    page_rank = defaultdict(lambda: float(initial_pr))
-	    num_outgoing_links = defaultdict(float)
-	    incoming_link_sets = defaultdict(set)
-	    incoming_links = defaultdict(lambda: np.array([]))
-	    damping_factor = 0.85
-
-	    # collect the number of outbound links and the set of all incoming documents
-	    # for every document
-	    for (from_id,to_id) in links:
-		num_outgoing_links[int(from_id)] += 1.0
-		incoming_link_sets[to_id].add(int(from_id))
+                
 	    
-	    # convert each set of incoming links into a numpy array
-	    for doc_id in incoming_link_sets:
-		incoming_links[doc_id] = np.array([from_doc_id for from_doc_id in incoming_link_sets[doc_id]])
+    def pagerank_calc(self):
+    	ranklist=page_rank.page_rank(self._from_to_link, 20, 1)
+    	con=lite.connect("dbFile.db")
+       	cur=con.cursor()
+       	print ranklist
 
-	    num_documents = float(len(num_outgoing_links))
-	    lead = (1.0 - damping_factor) / num_documents
-	    partial_PR = np.vectorize(lambda doc_id: page_rank[doc_id] / num_outgoing_links[doc_id])
-
-	    for _ in xrange(num_iterations):
-		for doc_id in num_outgoing_links:
-		    tail = 0.0
-		    if len(incoming_links[doc_id]):
-		        tail = damping_factor * partial_PR(incoming_links[doc_id]).sum()
-		    page_rank[doc_id] = lead + tail
-	    
-	    return page_rank
-
+       	for i in ranklist:
+       		print type(i)
+       		cur.execute('INSERT OR REPLACE INTO PageRank VALUES(?,?)',[i,ranklist[i]])
+       		con.commit()
+    	con.close
+    
 
 if __name__ == "__main__":
     bot = crawler(None, "urls.txt")
     bot.crawl(depth=1)
-    
+    bot.pagerank_calc()
     
     
     #page_rank method is to be called here
