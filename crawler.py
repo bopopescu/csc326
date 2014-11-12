@@ -406,11 +406,10 @@ class crawler(object):
     	ranklist=page_rank.page_rank(self._from_to_link, 20, 1)
     	con=lite.connect("dbFile.db")
        	cur=con.cursor()
-       	print ranklist
+
 
        	for i in ranklist:
-       		print type(i)
-       		cur.execute('INSERT OR REPLACE INTO PageRank VALUES(?,?)',[i,ranklist[i]])
+       		cur.execute('INSERT OR REPLACE INTO PageRank VALUES(?,?)',[int(i),ranklist[i]])
        		con.commit()
     	con.close
     
