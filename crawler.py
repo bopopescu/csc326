@@ -1,5 +1,6 @@
 
-
+import Queue
+import threading
 import page_rank
 import sqlite3 as lite
 import urllib2
@@ -383,7 +384,6 @@ class crawler(object):
 	
 	cur.execute('CREATE TABLE IF NOT EXISTS DocId_url(docid INTEGER, url TEXT, PRIMARY KEY(docid,url));')
 
-	
         for c in self._inverted_dict:
           for k in self._inverted_dict[c]:
 
@@ -422,7 +422,10 @@ if __name__ == "__main__":
     bot = crawler(None, "urls.txt")
     bot.crawl(depth=1)
     bot.pagerank_calc()
-    
+    #t1 = threading.Thread(target=MyThread1, args=[])
+    #t2 = threading.Thread(target=MyThread2, args=[])
+    #t1.start()
+   # t2.start()
     
     #page_rank method is to be called here
     
