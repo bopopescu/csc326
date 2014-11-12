@@ -11,6 +11,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from beaker.middleware import SessionMiddleware
 import beaker as beaker
+import sqlite3 as lite
 
 
 
@@ -157,7 +158,7 @@ def result():
 	return_buffer = ''''''
 	#use html get to get the keywords that user input, also check if the input is nothing or all spaces, if so, return none
 	
-
+	
 
 
 
@@ -262,7 +263,43 @@ def result():
 
 	return_buffer += '''</table>'''
 
+	
+	word_id = []
+	#GET WORD_ID FROM LEXICON TABLE
 
+	con = lite.connect("dbFile.db")
+	cur = con.cursor()
+	cur.execute("SELECT wordid, docid, url, rank FROM Lexicon NATURAL JOIN inverted_index NATURAL JOIN DocId_url NATURAL JOIN PageRank WHERE word = '%s' ORDER BY rank DESC;" % (result_static[0][0]))
+	word_id += cur.fetchall()
+	print word_id 
+
+
+
+
+
+
+
+	return_buffer += '''
+				<table id="Lexicon" class ="example3">
+				<tr>
+				<th colspan="3">PageRank</th>
+				</tr>
+				<tr>
+									<td>Word_id</td>
+									<td>URL</td>
+									<td>Score</td>
+				</tr>
+			'''
+
+	for row in word_id:
+		return_buffer +='''
+				<tr>
+					<td>%s</td>
+					<td>%s</td>
+					<td>%s</td>
+				</tr>'''% (row[0], row[2], row[3])
+	
+	return_buffer += '''</table>'''
 
 
 
